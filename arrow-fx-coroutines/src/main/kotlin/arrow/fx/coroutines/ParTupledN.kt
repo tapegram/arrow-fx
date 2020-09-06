@@ -167,12 +167,96 @@ suspend fun <A, B, C, D> parTupledN(
 ): Tuple4<A, B, C, D> =
   parMapN(
     ctx,
-    suspend { parMapN(ctx, fa, fb, ::Pair) },
-    suspend { parMapN(ctx, fc, fd, ::Pair) },
+    suspend { parTupledN(ctx, fa, fb) },
+    suspend { parTupledN(ctx, fc, fd) },
   ) { ab, cd ->
     val (a, b) = ab
     val (c, d) = cd
     Tuple4(a, b, c, d)
+  }
+
+/**
+ * Tuples [fa], [fb], [fc], [fd], [fe] on the provided [CoroutineContext].
+ * Cancelling this operation cancels all tasks running in parallel.
+ *
+ * **WARNING** it runs in parallel depending on the capabilities of the provided [CoroutineContext].
+ * We ensure they start in sequence so it's guaranteed to finish on a single threaded context.
+ *
+ * @see parTupledN for a function that ensures it runs in parallel on the [ComputationPool].
+ */
+suspend fun <A, B, C, D, E> parTupledN(
+  ctx: CoroutineContext,
+  fa: suspend () -> A,
+  fb: suspend () -> B,
+  fc: suspend () -> C,
+  fd: suspend () -> D,
+  fe: suspend () -> E,
+): Tuple5<A, B, C, D, E> =
+  parMapN(
+    ctx,
+    suspend { parTupledN(ctx, fa, fb, fc) },
+    suspend { parTupledN(ctx, fd, fe) },
+  ) { abc, de ->
+    val (a, b, c) = abc
+    val (d, e) = de
+    Tuple5(a, b, c, d, e)
+  }
+
+/**
+ * Tuples [fa], [fb], [fc], [fd], [fe], [ff] on the provided [CoroutineContext].
+ * Cancelling this operation cancels all tasks running in parallel.
+ *
+ * **WARNING** it runs in parallel depending on the capabilities of the provided [CoroutineContext].
+ * We ensure they start in sequence so it's guaranteed to finish on a single threaded context.
+ *
+ * @see parTupledN for a function that ensures it runs in parallel on the [ComputationPool].
+ */
+suspend fun <A, B, C, D, E, F> parTupledN(
+  ctx: CoroutineContext,
+  fa: suspend () -> A,
+  fb: suspend () -> B,
+  fc: suspend () -> C,
+  fd: suspend () -> D,
+  fe: suspend () -> E,
+  ff: suspend () -> F,
+): Tuple6<A, B, C, D, E, F> =
+  parMapN(
+    ctx,
+    suspend { parTupledN(ctx, fa, fb, fc, fd) },
+    suspend { parTupledN(ctx, fe, ff)},
+  ) { abcd, ef ->
+    val (a, b, c, d) = abcd
+    val (e, f) = ef
+    Tuple6(a, b, c, d, e, f)
+  }
+
+/**
+ * Tuples [fa], [fb], [fc], [fd], [fe], [ff], [fg] on the provided [CoroutineContext].
+ * Cancelling this operation cancels all tasks running in parallel.
+ *
+ * **WARNING** it runs in parallel depending on the capabilities of the provided [CoroutineContext].
+ * We ensure they start in sequence so it's guaranteed to finish on a single threaded context.
+ *
+ * @see parTupledN for a function that ensures it runs in parallel on the [ComputationPool].
+ */
+suspend fun <A, B, C, D, E, F, G> parTupledN(
+  ctx: CoroutineContext,
+  fa: suspend () -> A,
+  fb: suspend () -> B,
+  fc: suspend () -> C,
+  fd: suspend () -> D,
+  fe: suspend () -> E,
+  ff: suspend () -> F,
+  fg: suspend () -> G,
+): Tuple7<A, B, C, D, E, F, G> =
+  parMapN(
+    ctx,
+    suspend { parTupledN(ctx, fa, fb, fc, fd, fe) },
+    suspend { parTupledN(ctx, ff, fg)},
+  ) { abcde, fg ->
+    val (a, b, c, d, e) = abcde
+    val (f, g) = fg
+    Tuple7(a, b, c, d, e, f, g)
   }
 
 /**
@@ -217,6 +301,27 @@ suspend fun <A, B, C, D> parMapN(
   fc: suspend () -> C,
   f: (A, B, C) -> D
 ): D = parMapN(ComputationPool, fa, fb, fc, f)
+
+/**
+ * Parallel maps [fa], [fb], [fc], [fd] in parallel on [ComputationPool].
+ * Cancelling this operation cancels both operations running in parallel.
+ *
+ * @see parMapN for the same function that can race on any [CoroutineContext].
+ */
+suspend fun <A, B, C, D, E> parMapN(
+  fa: suspend () -> A,
+  fb: suspend () -> B,
+  fc: suspend () -> C,
+  fd: suspend () -> D,
+  f: (A, B, C, D) -> E,
+): E = parMapN(
+  ComputationPool,
+  suspend { parMapN(ComputationPool, fa, fb, fc, ::Triple) },
+  fd,
+) { abc, d ->
+  val (a, b, c) = abc
+  f(a, b, c, d)
+}
 
 /**
  * Parallel maps [fa], [fb] on the provided [CoroutineContext].
